@@ -9,6 +9,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"log"
 	"sync"
 	"time"
@@ -46,7 +47,7 @@ func NewCacheStore(cleaningInterval time.Duration) *CacheStore {
 	}
 
 	// Starts a goroutine that runs the cleanupExpiredItems method to periodically remove expired items.
-	// go cacheStore.cleanupExpiredItems();
+	go cacheStore.cleanupExpiredItems()
 
 	// Returns the initialized CacheStore.
 	return cacheStore
@@ -78,4 +79,29 @@ func (cacheStore *CacheStore) cleanupExpiredItems() {
 			})
 		}
 	}
+}
+
+// Retrieves value for a given key
+func (cacheStore *CacheStore) GetValue(key interface{}) (interface{}, bool, error) {
+	if key == nil {
+		return nil, false, errors.New("key cannot be nil")
+	}
+
+	obj, exists := cacheStore.items.Load(key)
+
+	if !exists {
+		return nil, false, nil
+	}
+
+	// type asserts the loaded item
+	item := obj.(CachedItem)
+
+	// check if the item is expired, if yes delete it
+	if item.expires > 0 && time.Now().UnixNano() > item.expires {
+		cacheStore.items.Delete(key)
+		return nil, false, nil
+	}
+
+	// if not expired, return the item's data
+	return item.data, true, nil
 }
