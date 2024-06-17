@@ -32,14 +32,9 @@ To run benchmarks, use the following command:
 
 Example benchmark results on a macOS (Darwin) system with an ARM64 architecture:
 ```
-goos: darwin
-goarch: arm64
-pkg: github.com/archishmansengupta/cache
-BenchmarkCache_SetValue/Set-0-12                 8359509               135.5 ns/op            72 B/op          4 allocs/op
-BenchmarkCache_GetValue/Get-0-12                31501023                38.18 ns/op            0 B/op          0 allocs/op
-BenchmarkCache_Iterate/Iterate-12                 108660             10925 ns/op              16 B/op          1 allocs/op
-PASS
-ok      github.com/archishmansengupta/cache     5.959s
+BenchmarkCache_SetValue/Set-0-12                 7123024               144.6 ns/op            72 B/op          4 allocs/op
+BenchmarkCache_GetValue/Get-0-12                30922952                38.03 ns/op            0 B/op          0 allocs/op
+BenchmarkCache_Iterate/Iterate-12                 110947             10935 ns/op              16 B/op          1 allocs/op
 ```
 These benchmarks demonstrate the performance of Cache Store's core functions, such as setting, getting, and iterating over cache items.
 
