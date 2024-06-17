@@ -31,31 +31,31 @@ type CachedItem struct {
 
 // NewCacheStore creates a new cache store asynchronously cleans expired entries after the given time passes
 func NewCacheStore(cleaningInterval time.Duration) *CacheStore {
-	// Validates that the cleaningInterval is positive; logs a fatal error and stops the program if not.
+	// Validate that the cleaningInterval is positive; logs a fatal error and stops the program if not.
 	if cleaningInterval <= 0 {
 		log.Fatal("cleaning interval must be positive")
 	}
 
-	// Creates a cancellable context using context.WithCancel.
+	// Create a cancellable context using context.WithCancel.
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Initializes a CacheStore with the context, cancel function, and cleaning interval.
+	// Initialize a CacheStore with the context, cancel function, and cleaning interval.
 	cacheStore := &CacheStore{
 		ctx:              ctx,
 		cancel:           cancel,
 		cleaningInterval: cleaningInterval,
 	}
 
-	// Starts a goroutine that runs the cleanupExpiredItems method to periodically remove expired items.
+	// Start a goroutine that runs the cleanupExpiredItems method to periodically remove expired items.
 	go cacheStore.cleanupExpiredItems()
 
-	// Returns the initialized CacheStore.
+	// Return the initialized CacheStore.
 	return cacheStore
 }
 
 // Go routine to periodically clean up expired items
 func (cacheStore *CacheStore) cleanupExpiredItems() {
-	// creates a time.Ticker that ticks at intervals specified by 'cleaning Intervals'
+	// create a time.Ticker that ticks at intervals specified by 'cleaning Intervals'
 	ticker := time.NewTicker(cacheStore.cleaningInterval)
 
 	// Stop the ticker after the function exits
@@ -67,7 +67,7 @@ func (cacheStore *CacheStore) cleanupExpiredItems() {
 			// on each tick it gets the current time in nanoseconds
 			currentTime := time.Now().UnixNano()
 
-			// iterates over all the items in the cache, checking each item's expiration time
+			// iterate over all the items in the cache, checking each item's expiration time
 			cacheStore.items.Range(func(key, value interface{}) bool {
 				item := value.(CachedItem)
 
@@ -104,4 +104,30 @@ func (cacheStore *CacheStore) GetValue(key interface{}) (interface{}, bool, erro
 
 	// if not expired, return the item's data
 	return item.data, true, nil
+}
+
+// set the value for a given key with optional expiration duration
+func (cacheStore *CacheStore) SetValue(key interface{}, value interface{}, duration time.Duration) error {
+	if key == nil {
+		return errors.New("key cannot be nil")
+	}
+
+	if value == nil {
+		return errors.New("value cannot be nil")
+	}
+
+	var expires int64
+
+	// calculate expiration timestamp
+	if duration > 0 {
+		expires = time.Now().Add(duration).UnixNano()
+	}
+
+	// store the kv pair in the cache
+	cacheStore.items.Store(key, CachedItem{
+		data:    value,
+		expires: expires,
+	})
+
+	return nil
 }
