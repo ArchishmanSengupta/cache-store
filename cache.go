@@ -31,7 +31,6 @@ package cache
 import (
 	"context"
 	"errors"
-	"log"
 	"sync"
 	"time"
 )
@@ -51,9 +50,10 @@ type CachedItem struct {
 }
 
 // NewCacheStore creates a new CacheStore instance with a specified cleaning interval.
-func NewCacheStore(cleaningInterval time.Duration) *CacheStore {
+func NewCacheStore(cleaningInterval time.Duration) (*CacheStore, error) {
+	println(cleaningInterval)
 	if cleaningInterval <= 0 {
-		log.Fatal("cleaning interval must be positive")
+		return nil, errors.New("cleaning interval must be positive")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -65,7 +65,7 @@ func NewCacheStore(cleaningInterval time.Duration) *CacheStore {
 
 	go cacheStore.cleanupExpiredItems()
 
-	return cacheStore
+	return cacheStore, nil
 }
 
 // cleanupExpiredItems periodically removes expired items from the cache.
@@ -157,6 +157,7 @@ func (cacheStore *CacheStore) RemoveKey(key interface{}) error {
 	if key == nil {
 		return errors.New("key cannot be nil")
 	}
+
 	cacheStore.items.Delete(key)
 	return nil
 }
