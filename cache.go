@@ -1,8 +1,29 @@
 /*
-	The purpose of this code is to implement a thread-safe in-memory cache with support
-	for optional expiration times for stored items.
+	Purpose: Implement a thread-safe in-memory cache with optional expiration times.
 
-	This cache can store any type of data and automatically remove expired items at specified intervals.
+	This CacheStore struct manages cached items using a sync.Map for concurrency safety.
+	It supports operations like setting values with expiration, retrieving values,
+	iterating over cache items, and removing specific items.
+
+	Background:
+	- CacheStore is initialized with a cleaningInterval, which determines how often expired items are removed.
+	- A cleaning goroutine periodically checks and removes expired items based on their expiration time.
+
+	Operations:
+	- GetValue retrieves a cached value for a given key, ensuring it's not expired before returning.
+	- SetValue sets a key-value pair in the cache with an optional expiration duration.
+	- Iterate allows iterating over non-expired items in the cache using a provided function.
+	- RemoveKey removes a specific key-value pair from the cache.
+	- CloseCacheStore stops the cleaning process and clears the cache.
+
+	Thread Safety:
+	- Utilizes sync.Map to ensure thread safety for concurrent access to cache operations.
+	- Cleaning operations and cache access are synchronized to prevent data races.
+
+	Error Handling:
+	- Errors are returned for nil keys or values in SetValue and GetValue.
+	- Error returned if the cleaning interval is non-positive during initialization.
+
 */
 
 package cache
@@ -15,115 +36,94 @@ import (
 	"time"
 )
 
-// CacheStore represents a cache store that holds arbitrary data with expiration time.
+// CacheStore represents a thread-safe cache store with optional expiration times.
 type CacheStore struct {
-	items            sync.Map // for thread-safe
+	items            sync.Map // Map for storing cached items (key-value pairs)
 	ctx              context.Context
 	cancel           context.CancelFunc
-	cleaningInterval time.Duration
+	cleaningInterval time.Duration // Interval for cleaning expired items
 }
 
-// CachedItem represents an item in the cache store with arbitrary data and expiration time.
+// CachedItem represents an item stored in the cache with associated data and expiration time.
 type CachedItem struct {
-	data    interface{}
-	expires int64
+	data    interface{} // Data stored in the cache
+	expires int64       // Expiration time in nanoseconds since Unix epoch
 }
 
-// NewCacheStore creates a new cache store asynchronously cleans expired entries after the given time passes
+// NewCacheStore creates a new CacheStore instance with a specified cleaning interval.
 func NewCacheStore(cleaningInterval time.Duration) *CacheStore {
-	// Validate that the cleaningInterval is positive; logs a fatal error and stops the program if not.
 	if cleaningInterval <= 0 {
 		log.Fatal("cleaning interval must be positive")
 	}
 
-	// Create a cancellable context using context.WithCancel.
 	ctx, cancel := context.WithCancel(context.Background())
-
-	// Initialize a CacheStore with the context, cancel function, and cleaning interval.
 	cacheStore := &CacheStore{
 		ctx:              ctx,
 		cancel:           cancel,
 		cleaningInterval: cleaningInterval,
 	}
 
-	// Start a goroutine that runs the cleanupExpiredItems method to periodically remove expired items.
 	go cacheStore.cleanupExpiredItems()
 
-	// Return the initialized CacheStore.
 	return cacheStore
 }
 
-// Go routine to periodically clean up expired items
+// cleanupExpiredItems periodically removes expired items from the cache.
 func (cacheStore *CacheStore) cleanupExpiredItems() {
-	// create a time.Ticker that ticks at intervals specified by 'cleaning Intervals'
 	ticker := time.NewTicker(cacheStore.cleaningInterval)
-
-	// Stop the ticker after the function exits
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			// on each tick it gets the current time in nanoseconds
 			currentTime := time.Now().UnixNano()
-
-			// iterate over all the items in the cache, checking each item's expiration time
 			cacheStore.items.Range(func(key, value interface{}) bool {
 				item := value.(CachedItem)
-
-				// if an item is expired it deletes the item from the cache
 				if item.expires > 0 && currentTime > item.expires {
 					cacheStore.items.Delete(key)
 				}
 				return true
 			})
+		case <-cacheStore.ctx.Done():
+			return
 		}
 	}
 }
 
-// Retrieves value for a given key
+// GetValue retrieves a value from the cache for a given key.
 func (cacheStore *CacheStore) GetValue(key interface{}) (interface{}, bool, error) {
 	if key == nil {
 		return nil, false, errors.New("key cannot be nil")
 	}
 
 	obj, exists := cacheStore.items.Load(key)
-
 	if !exists {
 		return nil, false, nil
 	}
 
-	// type asserts the loaded item
 	item := obj.(CachedItem)
-
-	// check if the item is expired, if yes delete it
 	if item.expires > 0 && time.Now().UnixNano() > item.expires {
 		cacheStore.items.Delete(key)
 		return nil, false, nil
 	}
 
-	// if not expired, return the item's data
 	return item.data, true, nil
 }
 
-// set the value for a given key with optional expiration duration
+// SetValue sets a value in the cache for a given key with an optional expiration duration.
 func (cacheStore *CacheStore) SetValue(key interface{}, value interface{}, duration time.Duration) error {
 	if key == nil {
 		return errors.New("key cannot be nil")
 	}
-
 	if value == nil {
 		return errors.New("value cannot be nil")
 	}
 
 	var expires int64
-
-	// calculate expiration timestamp
 	if duration > 0 {
 		expires = time.Now().Add(duration).UnixNano()
 	}
 
-	// store the kv pair in the cache
 	cacheStore.items.Store(key, CachedItem{
 		data:    value,
 		expires: expires,
@@ -132,14 +132,13 @@ func (cacheStore *CacheStore) SetValue(key interface{}, value interface{}, durat
 	return nil
 }
 
-// iterates over all the items in the cache
+// Iterate iterates over all non-expired items in the cache and applies the given function.
 func (cacheStore *CacheStore) Iterate(f func(key, value interface{}) bool) error {
 	if f == nil {
 		return errors.New("function cannot be nil")
 	}
 
 	currentTime := time.Now().UnixNano()
-
 	fn := func(key, value interface{}) bool {
 		item := value.(CachedItem)
 		if item.expires > 0 && currentTime > item.expires {
@@ -153,7 +152,7 @@ func (cacheStore *CacheStore) Iterate(f func(key, value interface{}) bool) error
 	return nil
 }
 
-// Remove KV Pair from the cache
+// RemoveKey removes a key-value pair from the cache.
 func (cacheStore *CacheStore) RemoveKey(key interface{}) error {
 	if key == nil {
 		return errors.New("key cannot be nil")
@@ -162,7 +161,7 @@ func (cacheStore *CacheStore) RemoveKey(key interface{}) error {
 	return nil
 }
 
-// close cache store and free resouces
+// CloseCacheStore stops the cache cleaning process and clears all stored items.
 func (cacheStore *CacheStore) CloseCacheStore() {
 	cacheStore.cancel()
 	cacheStore.items = sync.Map{}
