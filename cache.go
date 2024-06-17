@@ -152,3 +152,12 @@ func (cacheStore *CacheStore) Iterate(f func(key, value interface{}) bool) error
 	cacheStore.items.Range(fn)
 	return nil
 }
+
+// Remove KV Pair from the cache
+func (cacheStore *CacheStore) RemoveKey(key interface{}) error {
+	if key == nil {
+		return errors.New("key cannot be nil")
+	}
+	cacheStore.items.Delete(key)
+	return nil
+}
