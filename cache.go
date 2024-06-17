@@ -131,3 +131,24 @@ func (cacheStore *CacheStore) SetValue(key interface{}, value interface{}, durat
 
 	return nil
 }
+
+// iterates over all the items in the cache
+func (cacheStore *CacheStore) Iterate(f func(key, value interface{}) bool) error {
+	if f == nil {
+		return errors.New("function cannot be nil")
+	}
+
+	currentTime := time.Now().UnixNano()
+
+	fn := func(key, value interface{}) bool {
+		item := value.(CachedItem)
+		if item.expires > 0 && currentTime > item.expires {
+			cacheStore.items.Delete(key)
+			return true
+		}
+		return f(key, item.data)
+	}
+
+	cacheStore.items.Range(fn)
+	return nil
+}
