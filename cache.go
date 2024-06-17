@@ -161,3 +161,9 @@ func (cacheStore *CacheStore) RemoveKey(key interface{}) error {
 	cacheStore.items.Delete(key)
 	return nil
 }
+
+// close cache store and free resouces
+func (cacheStore *CacheStore) CloseCacheStore() {
+	cacheStore.cancel()
+	cacheStore.items = sync.Map{}
+}
