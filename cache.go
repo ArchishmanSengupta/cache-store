@@ -51,7 +51,6 @@ type CachedItem struct {
 
 // NewCacheStore creates a new CacheStore instance with a specified cleaning interval.
 func NewCacheStore(cleaningInterval time.Duration) (*CacheStore, error) {
-	println(cleaningInterval)
 	if cleaningInterval <= 0 {
 		return nil, errors.New("cleaning interval must be positive")
 	}
