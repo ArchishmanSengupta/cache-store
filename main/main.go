@@ -39,14 +39,14 @@ func main() {
 	}
 
 	// Set a value in the cache with the key and an expiration time
-	err = cacheStore.SetValue(key, value, duration)
+	err = cacheStore.Set(key, value, duration)
 	if err != nil {
 		fmt.Println("Error setting cache value:", err)
 		return
 	}
 
 	// Get the value from the cache
-	cachedValue, found, err := cacheStore.GetValue(key)
+	cachedValue, found, err := cacheStore.Get(key)
 	if err != nil {
 		fmt.Println("Error getting cache value:", err)
 		return
@@ -62,7 +62,7 @@ func main() {
 	time.Sleep(duration + time.Second)
 
 	// Try to get the value from the cache again
-	cachedValue, found, err = cacheStore.GetValue(key)
+	cachedValue, found, err = cacheStore.Get(key)
 	if err != nil {
 		fmt.Println("Error getting cache value:", err)
 		return
