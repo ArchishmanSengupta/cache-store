@@ -10,8 +10,8 @@
 	- A cleaning goroutine periodically checks and removes expired items based on their expiration time.
 
 	Operations:
-	- GetValue retrieves a cached value for a given key, ensuring it's not expired before returning.
-	- SetValue sets a key-value pair in the cache with an optional expiration duration.
+	- Get retrieves a cached value for a given key, ensuring it's not expired before returning.
+	- Set sets a key-value pair in the cache with an optional expiration duration.
 	- Iterate allows iterating over non-expired items in the cache using a provided function.
 	- RemoveKey removes a specific key-value pair from the cache.
 	- CloseCacheStore stops the cleaning process and clears the cache.
@@ -90,7 +90,7 @@ func (cacheStore *CacheStore) cleanupExpiredItems() {
 }
 
 // GetValue retrieves a value from the cache for a given key.
-func (cacheStore *CacheStore) GetValue(key interface{}) (interface{}, bool, error) {
+func (cacheStore *CacheStore) Get(key interface{}) (interface{}, bool, error) {
 	if key == nil {
 		return nil, false, errors.New("key cannot be nil")
 	}
@@ -110,7 +110,7 @@ func (cacheStore *CacheStore) GetValue(key interface{}) (interface{}, bool, erro
 }
 
 // SetValue sets a value in the cache for a given key with an optional expiration duration.
-func (cacheStore *CacheStore) SetValue(key interface{}, value interface{}, duration time.Duration) error {
+func (cacheStore *CacheStore) Set(key interface{}, value interface{}, duration time.Duration) error {
 	if key == nil {
 		return errors.New("key cannot be nil")
 	}

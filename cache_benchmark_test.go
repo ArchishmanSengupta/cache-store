@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func BenchmarkCache_SetValue(b *testing.B) {
+func BenchmarkCache_Set(b *testing.B) {
 	cache, _ := NewCacheStore(time.Second * 1)
 	defer cache.CloseCacheStore()
 
@@ -19,13 +19,13 @@ func BenchmarkCache_SetValue(b *testing.B) {
 
 		b.Run(fmt.Sprintf("Set-%d", i), func(b *testing.B) {
 			for j := 0; j < b.N; j++ {
-				cache.SetValue(key, value, duration)
+				cache.Set(key, value, duration)
 			}
 		})
 	}
 }
 
-func BenchmarkCache_GetValue(b *testing.B) {
+func BenchmarkCache_Get(b *testing.B) {
 	cache, _ := NewCacheStore(time.Second * 1)
 	defer cache.CloseCacheStore()
 
@@ -33,14 +33,14 @@ func BenchmarkCache_GetValue(b *testing.B) {
 	value := "value"
 	duration := time.Second * 5
 
-	cache.SetValue(key, value, duration)
+	cache.Set(key, value, duration)
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		b.Run(fmt.Sprintf("Get-%d", i), func(b *testing.B) {
 			for j := 0; j < b.N; j++ {
-				_, _, _ = cache.GetValue(key)
+				_, _, _ = cache.Get(key)
 			}
 		})
 	}
@@ -54,7 +54,7 @@ func BenchmarkCache_Iterate(b *testing.B) {
 	for i := 0; i < 1000; i++ {
 		key := fmt.Sprintf("key%d", i)
 		value := fmt.Sprintf("value%d", i)
-		cache.SetValue(key, value, 0)
+		cache.Set(key, value, 0)
 	}
 
 	b.ResetTimer()

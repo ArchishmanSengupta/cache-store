@@ -24,19 +24,19 @@ func TestCacheStore(t *testing.T) {
 	// Initialize a cache store for subsequent tests
 	cacheStore, _ := NewCacheStore(time.Second)
 
-	// Test SetValue and GetValue
-	t.Run("TestSetValueGetValue", func(t *testing.T) {
+	// Test Set and GetValue
+	t.Run("TestSetGetValue", func(t *testing.T) {
 		key := "test_key"
 		value := "test_value"
 		expiration := time.Millisecond * 500
 
-		err := cacheStore.SetValue(key, value, expiration)
+		err := cacheStore.Set(key, value, expiration)
 		if err != nil {
-			t.Errorf("Expected no error on SetValue, got %v", err)
+			t.Errorf("Expected no error on Set, got %v", err)
 		}
 
 		// Retrieve the value
-		v, exists, err := cacheStore.GetValue(key)
+		v, exists, err := cacheStore.Get(key)
 		if err != nil {
 			t.Errorf("Expected no error on GetValue, got %v", err)
 		}
@@ -51,7 +51,7 @@ func TestCacheStore(t *testing.T) {
 		time.Sleep(time.Millisecond * 600)
 
 		// Check if the value expired
-		_, exists, err = cacheStore.GetValue(key)
+		_, exists, err = cacheStore.Get(key)
 		if exists {
 			t.Error("Expected key to be expired, but it still exists")
 		}
@@ -60,8 +60,8 @@ func TestCacheStore(t *testing.T) {
 	// Test Iterate
 	t.Run("TestIterate", func(t *testing.T) {
 		// Add a couple of items
-		cacheStore.SetValue("key1", "value1", 0)
-		cacheStore.SetValue("key2", "value2", 0)
+		cacheStore.Set("key1", "value1", 0)
+		cacheStore.Set("key2", "value2", 0)
 
 		// Iterate and ensure all items are iterated over
 		err := cacheStore.Iterate(func(key, value interface{}) bool {
@@ -76,7 +76,7 @@ func TestCacheStore(t *testing.T) {
 	// Test RemoveKey
 	t.Run("TestRemoveKey", func(t *testing.T) {
 		// Add a key
-		cacheStore.SetValue("key_to_remove", "value", 0)
+		cacheStore.Set("key_to_remove", "value", 0)
 
 		// Remove existing key
 		err := cacheStore.RemoveKey("key_to_remove")
